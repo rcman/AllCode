@@ -1,0 +1,593 @@
+// Drawing Program
+// Date Start: April 1, 1996
+
+
+#include "draw.h"
+#include <dos.h>
+#include <stdio.h>
+#include <conio.h>
+#include <alloc.h>
+#include <process.h>
+#include <mem.h>
+#include <stdlib.h>
+#include <time.h>
+
+
+
+
+
+#define TOTALSHAPE 100
+#define TOTALANIMS 100
+
+void Init_Screen(void);
+void initarray(void);
+void filewrite(void);
+int fileread(void);
+void nextshape(void);
+void calcnum(void);
+int getch(void);
+void copypage(char *source, char *destin);
+void CutImage(int saveareax, int savesreay, int spritenum, int s);
+void PutImage(int spx,int spy, int spritenum );
+void EORImage(int spx,int spy, int spritenum );
+void RestoreBack(int spx,int spy, int spritenum, int s );
+void Animate(void);
+void Alloc_Screen(void);
+void SyncToVerticalRetrace( void );
+void draw_screen();
+void MoveSprites(int spx, int spy, int s);
+void FreeMem(void);
+void draw_screen(void);
+//void randomize(void);
+
+
+
+char far *screen = MK_FP(0xa000,0);
+char far *destin;
+
+int start=40,send=48,s=40;
+int xval=0;
+int x=0,y=0,offset=0,val=50;
+int numspr=36;
+int spx=100;            // Pixels
+int spy=100;
+int xx=0;
+int n;
+
+//char far *savearea;
+
+
+FILE *in, *out;
+
+struct ship {
+		int shipox;
+		int shipoy;
+		int shipx;
+		int shipy;
+		int oldspr;
+		int curspr;
+		int shipspeed;
+		char far *spritemask;
+		char far *savearea;
+
+	 } shipanim[40];
+
+
+struct fshape
+	{
+
+		int w,h;
+		int n,c;
+		int flag;
+		int rowflag;
+		char far shp[260];
+					// TOTALSHAPE  =  20
+	} fshp[TOTALSHAPE];
+
+
+static char screens[12][20] ={
+	{ 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x00, 0x00,0x00, 0x00, 0x00, 0x00 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x02, 0x03, 0x00,0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x02, 0x03, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x02, 0x03, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+
+	};
+
+
+
+
+void main(void)
+{
+
+
+
+	Init_Mode();
+
+	fileread();
+
+	Alloc_Screen();
+
+	draw_screen();
+
+	initarray();
+
+
+	do
+
+	{
+
+ //	delay(20);
+
+	for (n=0;n<numspr;n++)
+	{
+
+	MoveSprites(spx,spy,s);
+
+	xx = xx + 3;
+	if (xx >=numspr)
+		xx =0;
+
+	}
+
+	copypage(destin,screen);
+	draw_screen();
+
+	} while (!kbhit());
+
+
+	getch();
+	FreeMem();
+	Close_Mode();
+
+}
+
+
+void initarray(void)
+{
+
+
+	int c,sn;
+
+	randomize();
+
+	for (c=0 ; c<numspr; c++)
+	{
+		shipanim[c].shipx=random(320);
+		shipanim[c].shipy=random(170);
+		shipanim[c].curspr=40;
+
+
+		shipanim[c].shipox=shipanim[c].shipx;
+		shipanim[c].shipoy=shipanim[c].shipy;
+		shipanim[c].shipspeed=random(5)+1;
+		shipanim[c].oldspr=40;
+
+	    if ((shipanim[c].savearea = (char far  *) farmalloc(260l)) == NULL)
+	    {
+		     printf("Not enough memory to allocate buffer\n");
+		     exit(1);  /* terminate program if out of memory */
+	    }
+
+		PutImage(shipanim[c].shipx, shipanim[c].shipy, s);
+		}
+
+}
+
+
+void FreeMem(void)
+{
+	int i;
+
+	for (i=0 ; i<numspr ; i++)
+	{
+		farfree(shipanim[i].savearea);
+	}
+
+	farfree(destin);
+
+
+}
+
+void Init_Screen(void)
+{
+
+       //	if ((savearea = (char far  *) farmalloc(350)) == NULL)
+      //	{
+      //	printf("Not enough memory to allocate buffer\n");
+      //	exit(1);  /* terminate program if out of memory */
+      //	}
+
+
+}
+
+
+
+
+int fileread(void)
+{
+
+   int s=0,i;
+   struct fshape *p;
+
+   if ((in = fopen("sean1.std", "rb"))
+       == NULL)
+   {
+      fprintf(stderr, "Cannot open input file.\n");
+      return 1;
+   }
+
+   i=0;
+   for (s=0,p=&fshp[s];s<TOTALSHAPE && feof ;s++,p=&fshp[s],i=0)
+
+   while (i<256)
+      {
+	*(p->shp+i)=fgetc(in);
+  //      printf("%x",*(p->shp+i));
+	i++;
+      }
+
+   fclose(out);
+
+   return 1;
+
+}
+
+
+void Alloc_Screen(void)
+{
+
+	destin = (char far *) farmalloc(64000l);
+
+	if (destin == NULL)
+	{
+		 printf("Not enough memory to allocate screen buffer. Press any key to Exit \n");
+		 exit(1);  /* terminate program if out of memory */
+	}
+	_fmemset(destin, 0, 64000l);
+
+}
+
+
+
+void Animate(void)
+{
+
+	int i=0,j=0;
+	int vz=0;
+
+
+	if (s >= send)
+		s= 40;
+
+		for (i=0;i<16;i++)
+		{
+
+			for (j=0;j<16;j++)
+			{
+				*(destin+j+vz+xval)=fshp[s].shp[i*16+j];
+			}
+			vz = vz + 320;
+
+		}
+	       //       gotoxy(35, 12);
+	      //        printf("Number %d ",a);
+		s = s + 1;
+		xval +=1;
+		vz=0;
+
+//
+//              getch();
+
+
+
+
+
+}
+
+
+void copypage(char *source, char *destin)
+{
+//      printf("Start ASM");
+	asm {
+		 //.386
+		 push ds
+		 cld
+		 lds si, [source]
+		 les di, [destin]
+		 mov cx, 32000
+		 rep movsw
+		 pop ds
+	    }
+}
+
+void SyncToVerticalRetrace( void )
+  {
+  // If we happen to be in the middle of a vertical retrace
+  // period wait until its over.
+
+  while( inp( 0x3da ) & 8 )
+    ;
+
+  // Wait until we begin vertical retrace.
+
+  while( !(inp( 0x3da ) & 8) )
+    ;
+  }
+
+
+void CutImage(int spx,int spy, int spritenum, int s)
+{
+	int i=0;
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+		*(shipanim[spritenum].savearea+i)=*(screen+y+offset);
+		i++;
+		}
+
+		offset = offset + 320;      //bytes to next line
+	}
+
+
+}
+
+
+
+
+
+
+
+void PutImage(int spx,int spy,int spritenum)
+{
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+		if (fshp[spritenum].shp[x*16+y] >0)
+		{
+		 *(destin+y+offset)=fshp[spritenum].shp[x*16+y];
+
+		}
+		else
+		{
+		y = y + 1;
+		}
+
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+}
+
+void EORImage(int spx,int spy,int spritenum)
+{
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+		if (fshp[s].shp[x*16+y] >0)
+		{
+		 *(screen+y+offset)^=fshp[spritenum].shp[x*16+y];
+		}
+		else
+		{
+		y = y + 1;
+		}
+
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+}
+
+void RestoreBack(int spx,int spy, int spritenum, int s)
+{
+	int i=0;
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+		  *(screen+y+offset)=*(shipanim[spritenum].savearea+i);
+		  i++;
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+}
+
+/*
+void CutImage(void)
+{
+	int i=0;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+			*(savearea+i)=*(screen+y+offset+val);
+			i++;
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+	offset=0;
+}
+
+void PutImage(void)
+{
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+		  *(screen+y+offset+val)^=fshp[s].shp[x*16+y];;
+		}
+		offset = offset + 320;      //bytes to next line
+
+	}
+	s = s + 1;
+
+	if (s >= send)
+		s= 40;
+
+	offset=0;
+
+}
+
+void RestoreBack(void)
+{
+	int i=0;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+			 *(screen+y+offset+val)=*(savearea+i);
+			i++;
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+	offset=0;
+
+}
+*/
+
+
+void draw_screen(void)
+{
+	int ap=0;
+	int dn=0;
+	int cnt=0;
+	int t,s;
+
+	for (t=0;t<12;t++)
+	{
+		for (s=0;s<20;s++)
+		{
+			if (screens[t][s]==1)
+			{
+				for (x=0;x<16;x++)
+				{
+					for (y=0;y<16;y++)
+					{
+					*(destin+y+offset+ap+dn)=fshp[1].shp[x*16+y];;
+					}
+					offset = offset + 320;      //bytes to next line
+				}
+				offset = 0;
+				ap = ap +16;
+				//getch();
+			}
+			if (screens[t][s]==2)
+			{
+				for (x=0;x<16;x++)
+				{
+					for (y=0;y<16;y++)
+					{
+				*(destin+y+offset+ap+dn)=fshp[0].shp[x*16+y];
+
+					}
+				offset = offset + 320;      //bytes to next line
+				}
+				offset = 0;
+				ap = ap + 16;
+			       //       getch();
+			}
+
+			if (screens[t][s]==3)
+			 {
+				 for (x=0;x<16;x++)
+				{
+					 for (y=0;y<16;y++)
+					{
+					*(destin+y+offset+ap+dn)=fshp[28].shp[x*16+y];
+					}
+					 offset = offset + 320;      //bytes to next line
+				 }
+				 offset = 0;
+				 ap = ap +16;
+				 //getch();
+			 }
+			if (screens[t][s]==0)
+			 {
+				 for (x=0;x<16;x++)
+				{
+					 for (y=0;y<16;y++)
+					{
+					*(destin+y+offset+ap+dn)=0;
+					}
+					 offset = offset + 320;      //bytes to next line
+				 }
+				 offset = 0;
+				 ap = ap +16;
+				 //getch();
+			 }
+
+
+
+		}
+		cnt = cnt + 15;
+		dn = cnt * 320;
+		offset=0;
+
+	}
+}
+
+
+
+void MoveSprites(int spx, int spy, int s)
+{
+
+
+	//for (xx=0; xx<numspr; xx++)
+       //	{
+	      spx = shipanim[xx].shipx;
+	      spy = shipanim[xx].shipy;
+	      s   = shipanim[xx].curspr;
+
+	      shipanim[xx].shipox = spx;
+	      shipanim[xx].shipoy = spy;
+	      shipanim[xx].oldspr = s;
+
+	      spx += shipanim[xx].shipspeed;
+	      s = s + 1;
+
+	      if (s >= send)
+		s= 40;
+
+
+	      if (spx > 320)
+		 shipanim[xx].shipx =4;
+	      else
+	      {
+	      shipanim[xx].shipx = spx;
+	      shipanim[xx].curspr = s;
+
+	      //PutImage(shipanim[xx].shipox,spy,shipanim[xx].oldspr);
+
+	    //  CutImage(spx,spy,xx,shipanim[xx].curspr);
+	      PutImage(spx,spy,shipanim[xx].curspr);
+
+	    //  RestoreBack(shipanim[xx].shipox,spy,xx,shipanim[xx].oldspr);
+
+	//      }
+	     }
+
+}

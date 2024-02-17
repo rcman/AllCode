@@ -1,0 +1,469 @@
+//Code By Franco Gaetan
+//E-Mail franco@inforamp.net
+//http://www.inforamp.net/~franco
+//Scrolling Going Down
+
+#include <dos.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <alloc.h>
+#include <memory.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+#include <mem.h>
+
+#define TOTALSHAPE 110
+
+
+void Init_Mode(void);
+void Close_Mode(void);
+void CutImage(int saveareax, int savesreay, int spritenum);
+void PutImage(int);
+void RestoreBack(int spx,int spy, int spritenum );
+void getch(void);
+void initarray(void);
+void copypageup(void);
+void copypagedn(void);
+int kbhit(void);
+void initscreen(void);
+void checkletter(int line);
+int fileread(void);
+void CheckImage(int line);
+void SyncToVerticalRetrace( void );
+
+
+void checkit(void);
+//Global
+
+
+static char ship1[16][16] = {
+
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+	 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x17, 0x17, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17, 0x17,0x17, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x17, 0x17, 0x17, 0x17,0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x17, 0x17, 0x17, 0x17, 0x17,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x17, 0x17, 0x17, 0x17, 0x17, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x17, 0x17, 0x17, 0x17, 0x17, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x17, 0x17, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+
+
+  };
+
+
+struct fshape
+	{
+
+		int w,h;
+		int n,c;
+		int flag;
+		int rowflag;
+		char far shp[260];
+					// TOTALSHAPE  =  20
+	} fshp[TOTALSHAPE];
+
+
+void *buffer;
+void *image;
+
+char *pc[30];			// 20 Pointers for 20 Lines
+
+int leng=0;
+int totallength=0;
+int spaceleftb=0;
+int spaceleftt=0;
+int bottom=190;	// bottom let add X to it to get shape
+int line=0;
+int let=0;
+char p;
+int v=0;
+
+
+int nline=0;
+int pixelcount=0;
+int linecount=0;
+
+unsigned int imsize;
+int top = 290;
+int spx=100;            // Pixels
+int spy=180;
+int spritenum=0;
+int lp;
+int x,y,xy1,xy,fl,tm;
+int z=0;
+unsigned int offset = 0;
+int numspr=100;
+char far *scrn  = MK_FP(0xa000,0);
+char far *screen  = MK_FP(0xa000,0);
+char far *destin = MK_FP(0xa000,0);
+
+FILE *in, *out, *outdata;
+
+
+void initscreen(void)
+{
+
+
+
+	printf(" ");
+	destin = (char far *) farmalloc(64000l);
+
+//      printf("%p",destin);
+
+	if (destin == NULL)
+		{
+			 printf("Not enough memory to allocate screen buffer\n");
+			 //Close_Mode();
+			 exit(1);  /* terminate program if out of memory */
+
+		}
+		_fmemset(destin, 0, 64000);
+
+
+}
+
+
+
+void initarray(void)
+{
+
+
+	int c,sn,tempx,tempy,tempdir;
+
+	for (c=0 ; c<numspr; c++)
+	{
+	randomize();
+	// offset=random((1000)+1);
+	PutImage(offset);
+	}
+
+}
+
+
+
+void main(void)
+{
+	int i,xx,swav;
+
+	pc[0]  = " seasons greetings";
+	pc[1]  = "merry christmas ";
+	pc[2]  = "to all my friends ";
+	pc[3]  = "from franco";
+	pc[4]  = "or lmrfud";
+	pc[5]  = "greetings to";
+	pc[6]  = "no order";
+	pc[7]  = "skeletor";
+	pc[8]  = "jeff";
+	pc[9]  = "pooh";
+	pc[10] = "bigmell";
+	pc[11] = "heeler";
+	pc[12] = "mike segall";
+	pc[13] = "puker";
+	pc[14] = "sam";
+	pc[15] = "sean";
+	pc[16] = "terry";
+	pc[17] = "ebbie";
+	pc[18] = "        ";
+	pc[19] = "all the best";
+	pc[20] = "love";
+	pc[21] = "franco";
+	pc[22] = "  ";
+	pc[23] = "thats it";
+	pc[24] = "";
+	pc[25] = "no really";
+	pc[26] = "i m going";
+	pc[27] = "really";
+	pc[28] = "bye";
+   pc[29] = "   ";
+
+	Init_Mode();
+	fileread();
+
+	checkit();
+
+	checkletter(line);
+
+	do {
+
+	if (linecount==60)
+		{
+		linecount=0;
+		pixelcount=0;
+		nline = nline + 1;
+		line = line + 1;
+		checkletter(line);
+		}
+
+
+	if (pixelcount <=35)
+	{
+	CheckImage(line);
+	}
+
+		SyncToVerticalRetrace();
+		copypageup();
+		delay(10);
+		linecount = linecount + 1;
+
+
+	}while(nline!=28);
+
+	for (i=0;i<200;i++)
+		{
+		delay(10);
+		copypageup();
+		}
+
+	Close_Mode();
+
+}
+
+
+
+
+
+
+void Init_Mode(void)
+{
+	asm {
+		mov ax,0x13
+		int 0x10
+		 }
+}
+
+
+
+void Close_Mode()
+{
+
+	asm {
+		mov ax,0x03
+		int 0x10
+		}
+
+
+}
+
+
+
+void PutImage(int offset)
+{
+	int o;
+	for (o=0;o<100;o++)
+	{
+
+	*(scrn+offset+o)=1;
+       }
+}
+
+
+int fileread(void)
+{
+
+	int s=0,i;
+   struct fshape *p;
+
+	if ((in = fopen("mylet4.std", "rb"))
+		 == NULL)
+	{
+		fprintf(stderr, "Cannot open input file.\n");
+		return 1;
+
+	}
+
+	i=0;
+	for (s=0,p=&fshp[s];s<TOTALSHAPE && feof ;s++,p=&fshp[s],i=0)
+
+	while (i<256)
+		{
+	*(p->shp+i)=fgetc(in);
+  //      printf("%x",*(p->shp+i));
+	i++;
+		}
+
+	fclose(out);
+
+	return 1;
+
+}
+
+
+void copypagedn()
+{
+
+//      printf("Start ASM");
+	asm {
+		 push ds
+		 push es
+		 push si
+		 push di
+		 mov ax,0xa000
+		 mov es,ax
+		 mov ds,ax
+
+		 mov si, 0xf8c0
+		 mov di, 0xfa00
+
+		 mov cx, 16000
+		 std
+		 db 0x66
+		 rep
+		 movsw
+
+		 pop di
+		 pop si
+		 pop es
+		 pop ds
+		 }
+}
+
+
+
+void copypageup()
+{
+
+//      printf("Start ASM");
+	asm {
+		 push ds
+		 push es
+		 push si
+		 push di
+		 mov ax,0xa000
+		 mov es,ax
+		 mov ds,ax
+
+		 mov si, 0x140
+		 mov di, 0
+
+		 mov cx, 16000
+		 cld
+		 db 0x66
+		 rep
+		 movsw
+
+		 pop di
+		 pop si
+		 pop es
+		 pop ds
+		 }
+}
+
+
+
+void checkletter(int line)
+{
+
+	int i;
+
+
+	leng=0;
+
+
+	// p = *(pc[0]+j);
+
+	do {
+
+		p = *(pc[line]+leng);
+		leng +=1;
+		v=(int)p;
+			//	printf("v = %d",v);
+			//  getch();
+
+	}while(p!=0);
+
+	totallength = leng-2;
+
+	leng = leng / 2;
+	leng = leng * 16;
+	leng = 160 - leng;
+
+
+}
+
+void CheckImage(line)
+{
+
+
+	int i,x,y,over=0;
+
+
+	if (offset <=64000)
+	{
+
+
+	offset=spy*320+leng;
+						// Letter a = 60
+
+	for (i=0;i<=totallength;i++)
+	{
+		p = *(pc[line]+i);		// ACS value of a = 97
+		v=(int)p;
+
+		let = v - 97;                   //
+	  //	let = let + 60;
+		 //	printf("let= %d",let);
+		 //	getch();
+		if (let ==-65)		// is it a space
+			let=35;
+
+		for (x=0;x<16;x++)
+			{
+				 //	delay(33);
+				pixelcount=pixelcount+1;
+
+				for (y=0;y<16;y++)
+				{
+				*(screen+y+offset+over)=fshp[let].shp[x*16+y];
+				 }
+				 offset = offset + 320;      //bytes to next line
+			 }
+
+			 over = over + 16;
+			 offset = spy*320+leng;
+			 spy=180;
+			 let=0;
+			}
+		}
+
+ }
+
+
+void checkit(void)
+{
+
+	int x,y,l;
+
+			for (x=0;x<=255;x++)
+			{
+				fshp[35].shp[x]=0;
+
+			}
+
+
+}
+
+
+
+
+void SyncToVerticalRetrace( void )
+  {
+  // If we happen to be in the middle of a vertical retrace
+  // period wait until its over.
+
+  while( inp( 0x3da ) & 8 )
+    ;
+
+  // Wait until we begin vertical retrace.
+
+  while( !(inp( 0x3da ) & 8) )
+	 ;
+  }
