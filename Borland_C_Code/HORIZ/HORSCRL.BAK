@@ -1,0 +1,184 @@
+
+#include <dos.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <alloc.h>
+#include <memory.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+#include <mem.h>
+
+
+
+void Init_Mode(void);
+void Close_Mode(void);
+void CutImage(int saveareax, int savesreay, int spritenum);
+void PutImage(int);
+void RestoreBack(int spx,int spy, int spritenum );
+void getch(void);
+void initarray(void);
+void copypage();
+int kbhit(void);
+void initscreen(void);
+int getkey(void);
+
+//Global
+
+char far *scrn  = MK_FP(0xa000,0);
+char far *screen  = MK_FP(0xa000+64000-320,0);
+char far *destin = MK_FP(0xa000+64000,0);
+
+
+void *buffer;
+void *image;
+unsigned int imsize;
+int top = 290;
+int bottom = 35;
+int rbottom = 300;
+int lbottom = 145;
+int spx=100;            // Pixels
+int spy=100;
+int spritenum=0;
+int lp;
+int x,y,xy1,xy,fl,tm;
+int z=0;
+int offset=320*190+160;
+int numspr=100;
+
+
+void initscreen(void)
+{
+
+
+
+	printf(" ");
+	destin = (char far *) farmalloc(64000l);
+
+//      printf("%p",destin);
+
+	if (destin == NULL)
+		{
+			 printf("Not enough memory to allocate screen buffer\n");
+			 //Close_Mode();
+			 exit(1);  /* terminate program if out of memory */
+
+		}
+		_fmemset(destin, 0, 64000);
+
+
+}
+
+
+
+void initarray(void)
+{
+
+
+
+
+}
+
+
+
+void main(void)
+{
+	int i,xx,swav;
+
+
+	Init_Mode();
+	PutImage(offset);
+
+	for (i=0;i<600;i++)
+	{
+		copypage ();
+			delay(5);
+
+		// getch();
+	}
+
+
+	Close_Mode();
+
+}
+
+
+
+
+
+
+void Init_Mode(void)
+{
+	asm {
+		mov ax,0x13
+		int 0x10
+	    }
+}
+
+
+
+void Close_Mode()
+{
+
+	asm {
+		mov ax,0x03
+		int 0x10
+		}
+
+
+}
+
+void PutImage(int offset)
+{
+	int y;
+	for(y=0;y<640;y++)
+	  *(scrn+offset+y)=y;
+
+}
+
+
+
+void copypage()			// scrolling from left to right
+{
+
+//      printf("Start ASM");
+	asm {
+		 push ds
+		 push es
+		 push si
+		 push di
+		 mov ax,0xa000
+		 mov es,ax
+		 mov ds,ax
+
+		 mov si, 0xf9ff
+		 mov di, 0xfa00
+
+		 //lds si, [source]
+		 //les di, [destin]
+
+		 mov cx, (16*320/4)
+		 std
+
+		 db 0x66
+		 rep
+		 movsw
+
+		 pop di
+		 pop si
+		 pop es
+		 pop ds
+		 }
+}
+
+
+
+
+int getkey()
+{
+
+	getchar();
+
+}
+
+

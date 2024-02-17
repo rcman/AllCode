@@ -1,0 +1,182 @@
+// Drawing Program
+// Date Start: April 1, 1996
+
+
+#include "draw.h"
+#include <dos.h>
+#include <stdio.h>
+#include <conio.h>
+
+
+
+#define TOTALSHAPE 100
+#define TOTALANIMS 10
+
+void Init_Screen(void);
+void initarray(void);
+void filewrite(void);
+int fileread(void);
+void nextshape(void);
+void calcnum(void);
+int getch(void);
+
+char far *screen = MK_FP(0xa000,0);
+
+FILE *in, *out;
+
+
+struct fshape
+	{
+
+		int w,h;
+		int n,c;
+		int flag;
+		int rowflag;
+		char far shp[260];
+					// TOTALSHAPE  =  20
+	} fshp[TOTALSHAPE];
+
+
+
+void main(void)
+{
+
+	Init_Mode();
+
+	fileread();
+	getch();
+	calcnum();
+
+//	nextshape();
+	getch();
+
+	Close_Mode();
+
+}
+
+
+
+
+int fileread(void)
+{
+
+   int s=0,i;
+   struct fshape *p;
+
+   if ((in = fopen("fileout.dat", "rb"))
+       == NULL)
+   {
+      fprintf(stderr, "Cannot open input file.\n");
+      return 1;
+   }
+
+   i=0;
+   for (s=0,p=&fshp[s];s<TOTALSHAPE && feof ;s++,p=&fshp[s],i=0)
+
+   while (i<256)
+      {
+	*(p->shp+i)=fgetc(in);
+  //      printf("%x",*(p->shp+i));
+	i++;
+      }
+
+   fclose(out);
+
+   return 1;
+
+}
+
+void nextshape(void)
+{
+
+	int i,j,vz,a=0;
+	int ov=0;
+
+	vz=0;
+
+	for (a=0;a<10;a++)
+	{
+
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+		*(screen+j+vz+ov) = fshp[a].shp[i*16+j];
+
+		}
+		vz = vz + 320;
+	       //       getch();
+	    }
+	    getch();
+	    vz=0;
+	    ov=ov+8;
+	}
+
+}
+
+void calcnum(void)
+{
+	int a=0,b=0,c=0,d=0,e=0;
+	int i,j,vz=0;
+	int k;
+
+	int fact=8;
+
+	for (k=0;k< 180;k++)
+	{
+
+	     //  getch();
+	      //	sound(700);
+	      //	delay(5);
+	      //	nosound();
+	      //	delay(20);
+
+		for (i=0;i<8;i++)
+		{
+			for (j=0;j<8;j++)
+			{
+
+			*(screen+j+vz) = fshp[e].shp[i*16+j];
+			*(screen+fact+j+vz) = fshp[d].shp[i*16+j];
+			*(screen+fact*2+j+vz) = fshp[c].shp[i*16+j];
+			*(screen+fact*3+j+vz) = fshp[b].shp[i*16+j];
+			*(screen+fact*4+j+vz) = fshp[a].shp[i*16+j];
+			}
+			vz = vz + 320;
+
+		}
+	vz=0;
+	a = a +5;
+	if (a>9)
+	{
+	 b = b + 1;
+	 a=0;
+	 }
+	  if (b>9)
+	  {
+	   c= c +1;
+	   b=0;
+	   }
+	   if (c>9)
+	   {
+	    d = d + 1;
+	    c=0;
+	    }
+	    if (d>9)
+	    {
+		e = e +1 ;
+		d=0;
+	    }
+		if (e>9)
+		{
+		  e=0;
+		  }
+
+
+//	getch();
+	}
+
+
+}
+
+

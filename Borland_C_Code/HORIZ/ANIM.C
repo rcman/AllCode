@@ -1,0 +1,339 @@
+// Program
+// Date Start: April 1, 1996
+
+
+#include "draw.h"
+#include <dos.h>
+#include <stdio.h>
+#include <conio.h>
+#include <alloc.h>
+#include <process.h>
+#include <mem.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define TOTALSHAPE 100
+#define TOTALANIMS 100
+
+void CheckValues(void);
+void copyfromltor(void);
+void Init_Screen(void);
+void initarray(void);
+void filewrite(void);
+int fileread(void);
+void nextshape(void);
+void calcnum(void);
+int getch(void);
+void copypage();
+void SyncToVerticalRetrace( void );
+void draw_screen();
+void MoveSprites(int spx, int spy, int s);
+void FreeMem(void);
+void draw_screen(void);
+void setpal(void);
+//void randomize(void);
+
+
+char far *scrn  = MK_FP(0xa000,0);
+char far *screen  = MK_FP(0xa000,0);
+char far *destin = MK_FP(0xa000,0);
+
+unsigned char pal[256*3];
+
+int start=40,send=48,s=40;
+int xval=0;
+int x=0,y=0,offset=0,val=50;
+int numspr=30;
+int spx=100;            // Pixels
+int spy=100;
+int xx=0;
+int n;
+
+//char far *savearea;
+
+
+FILE *in, *out;
+
+struct ship {
+		int shipox;
+		int shipoy;
+		int shipx;
+		int shipy;
+		int oldspr;
+		int curspr;
+		int shipspeed;
+		char far *spritemask;
+		char far *savearea;
+
+	 } shipanim[40];
+
+
+struct fshape
+	{
+
+		int w,h;
+		int n,c;
+		int flag;
+		int rowflag;
+		char far shp[260];
+					// TOTALSHAPE  =  20
+	} fshp[TOTALSHAPE];
+
+
+static char screens[12][20] ={
+	{ 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x03, 0x00, 0x00,0x00, 0x00, 0x00, 0x00 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x02, 0x03, 0x00,0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x02, 0x03, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x02, 0x03, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+	{ 0x02, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02,0x02, 0x02, 0x02, 0x02 },
+
+	};
+
+
+
+
+void main(void)
+{
+
+	Init_Mode();
+	fileread();
+	draw_screen();
+
+	do
+	{
+
+	copyfromltor();
+   SyncToVerticalRetrace();
+	copypage();
+
+	} while (!kbhit());
+
+	Close_Mode();
+
+}
+
+int fileread(void)
+{
+
+	int s=0,i;
+	struct fshape *p;
+
+	if ((in = fopen("sean1.std", "rb"))
+		 == NULL)
+	{
+		fprintf(stderr, "Cannot open input file.\n");
+		return 1;
+	}
+
+	i=0;
+	for (s=0,p=&fshp[s];s<TOTALSHAPE && feof ;s++,p=&fshp[s],i=0)
+
+	while (i<256)
+		{
+	*(p->shp+i)=fgetc(in);
+  //      printf("%x",*(p->shp+i));
+	i++;
+		}
+
+	fclose(out);
+
+	return 1;
+
+}
+
+
+void copypage(void)
+{
+
+//      printf("Start ASM");
+	asm {
+		 push ds
+		 push es
+		 push si
+		 push di
+		 mov ax,0xa000
+		 mov es,ax
+		 mov ds,ax
+
+		 mov si, 0xf9ff
+		 mov di, 0xfa00
+
+		 //lds si, [source]
+		 //les di, [destin]
+
+		 mov cx, (16*320/4)
+		 std
+		 db 0x66
+		 rep
+		 movsw
+
+		 pop di
+		 pop si
+		 pop es
+		 pop ds
+		 }
+}
+
+
+void setpal(void)
+{
+	int i;
+	outp(0x3c8,0);
+	for (i=0;i<256*3;i++) outp(0x3c9,0);
+
+}
+
+
+
+void SyncToVerticalRetrace( void )
+  {
+  // If we happen to be in the middle of a vertical retrace
+  // period wait until its over.
+
+  while( inp( 0x3da ) & 8 )
+	 ;
+
+  // Wait until we begin vertical retrace.
+
+  while( !(inp( 0x3da ) & 8) )
+	 ;
+  }
+
+
+void draw_screen(void)
+{
+	int ap=0;
+	int dn=0;
+	int cnt=0;
+	int t=0,s=0;
+
+	for (t=0;t<12;t++)
+	{
+		for (s=0;s<20;s++)
+		{
+			if (screens[t][s]==1)
+			{
+				for (x=0;x<16;x++)
+				{
+					for (y=0;y<16;y++)
+					{
+					*(scrn+y+offset+ap+dn)=fshp[1].shp[x*16+y];;
+					}
+					offset = offset + 320;      //bytes to next line
+				}
+				offset = 0;
+				ap = ap +16;
+				//getch();
+			}
+			if (screens[t][s]==2)
+			{
+				for (x=0;x<16;x++)
+				{
+					for (y=0;y<16;y++)
+					{
+				*(scrn+y+offset+ap+dn)=fshp[0].shp[x*16+y];
+
+					}
+				offset = offset + 320;      //bytes to next line
+				}
+				offset = 0;
+				ap = ap + 16;
+					 //       getch();
+			}
+
+			if (screens[t][s]==3)
+			 {
+				 for (x=0;x<16;x++)
+				{
+					 for (y=0;y<16;y++)
+					{
+					*(scrn+y+offset+ap+dn)=fshp[28].shp[x*16+y];
+					}
+					 offset = offset + 320;      //bytes to next line
+				 }
+				 offset = 0;
+				 ap = ap +16;
+				 //getch();
+			 }
+			if (screens[t][s]==0)
+			 {
+				 for (x=0;x<16;x++)
+				{
+					 for (y=0;y<16;y++)
+					{
+					*(scrn+y+offset+ap+dn)=0;
+					}
+					 offset = offset + 320;      //bytes to next line
+				 }
+				 offset = 0;
+				 ap = ap +16;
+				 //getch();
+			 }
+
+
+
+		}
+		cnt = cnt + 15;
+		dn = cnt * 320;
+		offset=0;
+
+	}
+}
+
+
+void copyfromltor(void)
+{
+
+	int rs=58879;
+	int ls=58560;
+	int i,dwn=0;
+	int pix=0;
+
+
+
+	for (i=0;i<=16;i++)
+	{
+
+		pix=*(screen+rs+dwn);
+		*(screen+ls+dwn)=pix;
+		dwn=dwn+320;
+	}
+	dwn=0;
+
+
+
+
+}
+
+void CheckValues(void)
+{
+
+	int rs=58879;
+	int ls=58560;
+	int i,dwn=0;
+	int pix=1;
+
+
+
+	for (i=0;i<16;i++)
+	{
+
+	delay(50);
+
+	 //  pix=*(screen+ls+dwn);
+		*(screen+rs+dwn)=pix;
+		dwn=dwn+320;
+	}
+	dwn=0;
+
+
+
+
+}
