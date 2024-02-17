@@ -1,0 +1,17 @@
+
+#define JOY_X 1
+#define JOY_Y 2
+#define JBUTTON1 0x10
+#define JBUTTON2 0x20
+#define MBUTTON1 1
+#define MBUTTON2 2
+
+
+int readstick(int);             // Read joystick position
+int readjbutton(int);           // Read joystick button
+int initmouse();		// Initialize mouse driver
+void rempointer();              // Remove mouse pointer from display
+int readmbutton();              // Read mouse buttons
+void relpos(int *,int *);       // Get relative mouse position
+int scankey();                  // Get keyboard scan code
+

@@ -1,0 +1,396 @@
+// By: Franco Gaetan
+// Date Start: Dec 2, 1996
+
+#include <dos.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <alloc.h>
+#include <memory.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+#include <bios.h>
+#include <conio.h>
+#include "draw.h"
+
+#define TOTALSHAPE 100
+#define TOTALANIMS 10
+#define TOTALOBJECTS 20
+
+void StartShot(void);
+void checkkeys(void);
+void moveshots(void);
+void initarray(void);
+int  getch(void);
+int getk(void);
+void CutImage(int spx,int spy);
+void PutImage(int spx,int spy,int sprnum);
+void RestoreBack(int spx,int spy);
+int fileread(void);
+void SyncToVerticalRetrace( void );
+void moveshipL(int x, int y);
+void moveshipR(int x, int y);
+
+
+//Global
+
+char far *screen = MK_FP(0xa000,0);
+char far *destin;
+
+int ext=0;
+int hc,lc,rc;
+int shotnumber=0;
+
+int sprnum=30;
+
+int smv=4;		// Ship Movement Left or Right
+int MaxShots=40;	// Maximum Number of Shots
+
+int spx=100;            // Pixels
+int spy=100;
+int x,y,xy1,xy,fl,tm,s,t,l;
+unsigned int offset = 0;
+
+//////////////////////////
+
+char *pc[20];
+unsigned char key;
+
+int leng=0;
+int totalleng=0;
+int spaceleftb=0;
+int spaceleftt=0;
+int bottom=190;	// bottom let add X to it to get shape
+int line=0;
+int let=0;
+char p;
+int v=0;
+int chme=0;
+
+int nline=0;
+int pixelcount=0;
+int linecount=0;
+int spritenum=0;
+
+
+
+FILE *in, *out, *outdata, *indata, *std, *map, *mapin;
+
+
+struct fshape
+	{
+
+		int w,h;
+		int n,c;
+		int flag;
+		int rowflag;
+		char far shp[260];
+					// TOTALSHAPE  =  20
+	} fshp[TOTALSHAPE];
+
+struct shots
+	{
+		int x,y;
+		int flag;
+	} totalshots[1000];
+
+
+struct animshape {
+		int active;
+		int animwidth;
+		int animheight;
+		int animox;
+		int animoy;
+		int animx;
+		int animy;
+		int prox;
+		int animspeed;
+		int currentshape;
+		int oldshape;
+		int max;
+		int row;
+
+		struct fshape *fshp[TOTALSHAPE];        // 10 Pointers to data
+
+	 } animobjects[TOTALANIMS];
+
+
+void main()
+{
+
+	int c;
+	Init_Mode();
+	fileread();
+	initarray();
+	do{
+
+
+	  getk();
+	 // delay(5);
+	  moveshots();
+
+	 }while(key !=1);
+
+	Close_Mode();
+}
+
+void initarray(void)
+{
+			int i;
+			for (i=0;i<MaxShots;i++)
+			{
+			animobjects[i].active=0;
+			}
+
+
+}
+
+int fileread(void)
+{
+
+	int s=0,i;
+	struct fshape *p;
+
+	if ((in = fopen("defend.std", "rb"))
+		 == NULL)
+	{
+		fprintf(stderr, "Cannot open input file.\n");
+		return 1;
+
+	}
+
+	i=0;
+	for (s=0,p=&fshp[s];s<TOTALSHAPE && feof ;s++,p=&fshp[s],i=0)
+
+	while (i<256)
+		{
+	*(p->shp+i)=fgetc(in);
+  //      printf("%x",*(p->shp+i));
+	i++;
+		}
+
+	fclose(in);
+
+	return 1;
+
+}
+
+void CutImage(int spx,int spy)
+{
+	int i=0;
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+				fshp[2].shp[x*16+y]=*(screen+y+offset);
+
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+
+}
+
+void PutImage(int spx,int spy, int sprnum)
+{
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+		  *(screen+y+offset)^=fshp[sprnum].shp[x*16+y];
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+}
+
+void RestoreBack(int spx,int spy)
+{
+	int i=0;
+	offset=spy*320+spx;
+
+	for (x=0;x<16;x++)
+	{
+		for (y=0;y<16;y++)
+		{
+			 *(screen+y+offset)=fshp[2].shp[x*16+y];
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+
+}
+
+
+void SyncToVerticalRetrace( void )
+  {
+  // If we happen to be in the middle of a vertical retrace
+  // period wait until its over.
+
+  while( inp( 0x3da ) & 8 )
+	 ;
+
+  // Wait until we begin vertical retrace.
+
+  while( !(inp( 0x3da ) & 8) )
+	 ;
+  }
+
+
+
+
+void StartShot(void)
+{
+	int i;
+		for (i=0;i<MaxShots;i++)
+		{
+			if (animobjects[i].active==0)
+			{
+			animobjects[i].animx=spx;
+			animobjects[i].animy=spy;
+			animobjects[i].animox=spx;
+			animobjects[i].animoy=spy;
+			animobjects[i].active=1;
+			animobjects[i].animspeed=smv;
+			}
+
+		}
+
+
+}
+
+void moveshots(void)
+{
+	int i;
+	int tempx,tempy;
+	int otempx,otempy;
+
+	for (i=0;i<MaxShots;i++)
+		{
+			if (animobjects[i].active==1)
+			{
+			tempx = animobjects[i].animx;
+			tempy = animobjects[i].animy;
+			otempx = animobjects[i].animox;
+			otempy = animobjects[i].animoy;
+
+					if (tempx < 0 || tempx > 310)
+					{
+					animobjects[i].active=0;
+					PutImage(tempx,tempy, 34);
+					}
+
+		  	PutImage(otempx,otempy, 34);
+			tempx = tempx + animobjects[i].animspeed;
+		  //	animobjects[i].active=tempx;
+			animobjects[i].animx=tempx;
+			PutImage(tempx,tempy, 34);
+			}
+
+		}
+
+}
+/*
+
+//' Subroutine to fire shot from your ship
+//--------------------------------- SHOT.BAS -------------------------------¦+-+
+//'move shot across the screen                                                  
+//moveshots:                                                                    _
+//		  FOR sh = 1 TO 40                                                      _
+//		  IF sht(1, 1, sh) = 0 THEN GOTO sap                                    _
+//		  nx = sht(1, 1, sh)                                                    _
+//		  ny = sht(1, 2, sh)                                                    _
+//		  IF nx > 310 OR nx < 10 THEN sht(1, 1, sh) = 0: PUT (nx, ny + 2), Box%,_
+//		  PUT (nx, ny + 2), Box%, XOR                                           _
+//		  nx = nx + sht(1, 3, sh)                                               _
+//		  sht(1, 1, sh) = nx                                                    _
+//		  PUT (nx, ny + 2), Box%                                                _
+//sap:                                                                          _
+//		  NEXT sh                                                               _
+//		  RETURN
+																										_
+
+//fireshot:
+//		  FOR i = 1 TO 40
+//		  IF sht(1, 1, i) = 0 THEN GOTO ov
+//		  NEXT i
+//		  RETURN
+//ov:
+//		  sht(1, 1, i) = x
+ //		  sht(1, 2, i) = sy: PUT (x, sy + 2), Box%
+ //		  sht(1, 3, i) = smv
+//
+//
+
+*/
+
+int getk(void)
+{
+	asm {
+		mov ah,0
+		in al,0x60
+		mov [key],al
+		}
+//printf("%d\n",key);
+
+			 if (key==75)
+			 {
+		//	 spx = totalshots[shotnumber].x;
+			 spx = spx -3 ;                    			// Left
+			 smv = -4;
+
+			 moveshipL(spx, spy);
+			 }
+				if (spx < 0)
+					{
+					spx =0;
+					}
+
+
+			 if (key==77)
+			 {
+			// spx = totalshots[shotnumber].x;
+			 spx = spx + 3;
+			 smv = 4;
+			 moveshipR(spx, spy);                            // Right
+			 }
+			 if (spx > 319)
+				{
+				spx = 319;
+				}
+
+
+			 if (key==72)
+		{
+		StartShot();
+		}
+
+	 return(key);
+}
+
+
+
+void moveshipL(int x, int y)
+{
+	CutImage(spx,spy);
+	PutImage(spx,spy,32);
+	SyncToVerticalRetrace();
+	RestoreBack(spx,spy);
+
+
+
+}
+
+void moveshipR(int x, int y)
+{
+	CutImage(spx,spy);
+	PutImage(spx,spy,30);
+	SyncToVerticalRetrace();
+	RestoreBack(spx,spy);
+
+
+
+}
