@@ -1,0 +1,992 @@
+// Drawing Program
+// Date Start: June 1, 1995
+// Revision: April 4 - 1996
+
+
+#include "draw.h"
+#include <dos.h>
+#include <bios.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <alloc.h>
+#include <memory.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+#include <conio.h>
+
+#pragma inline
+
+void Init_Screen(void);
+void initarray(void);
+void CutImage(void);
+void PutImage(void);
+void RestoreBack(void);
+void PutColor(void);
+void BoxImage(void);
+void BoxMask(void);
+int getch(void);
+int Get_Mouse(int command);
+void DrawCursor(void);
+void DrawBox(void);
+void DrawMask(void);
+void Calc_Coords(void);
+void Check_Color(void);
+void DrawGrid(void);
+void Colors(void);
+void Check_Draw(void);
+void drawmem(void);
+void check_thedata(void);
+void nextshape(int , int);
+void drawshape(int , int);
+void Draw_Data_to_Grid(int , int);
+void clearshape(void);
+void cleargrid(void);
+void placeshape(int , int);
+void draw_screen(int , int);
+void EraseObject(void);
+void SaveLastImage(void);
+void UndoLastChange(void);
+void copyshape(void);
+void flipshape(void);
+void Animate(void);
+
+
+char far *screen = MK_FP(0xa000,0);
+
+extern char far *st1;
+extern int mspeed;
+extern int acxm,acym,oldval;          // Actuall Y Mouse and X mouse
+
+extern int x,y;
+extern int j=2;                // start off color
+extern int xy1;
+extern int oldy;
+extern int oval;
+extern int nx,ny,val,oldoffset;
+extern int ym,chkdrw=0;
+extern int xy,fl,tm;
+extern int offset = 0;
+extern int tm,ptflag;
+
+int button,ym,x,y,xm,ym,width;
+
+char far *savearea;
+
+int lc,rc,hc;
+int nff=0;
+int flag=1;
+int spy=100;
+int spritenum=0;
+int lp;
+
+
+
+int z=0;
+
+int numspr=10;
+
+
+
+int c,b,st,ac,step,tim;
+int inc=5;
+int lso=0;
+
+char far *point;
+char *p;
+
+char undoarea[260];
+int sp,rw=0;
+
+char sc[20];
+
+static char box[6][6] = {
+    { 0x0a, 0x0a, 0x0a, 0x0a,0x0a, 0x0a, },
+    { 0x0a, 0x00, 0x00, 0x00,0x00, 0x0a, },
+    { 0x0a, 0x00, 0x00, 0x00,0x00, 0x0a, },
+    { 0x0a, 0x00, 0x00, 0x00,0x00, 0x0a, },
+    { 0x0a, 0x00, 0x00, 0x00,0x00, 0x0a, },
+    { 0x0a, 0x0a, 0x0a, 0x0a,0x0a, 0x0a, },
+      };
+static char boxmask[6][6] = {
+    { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, },
+    { 0x10, 0x00, 0x00, 0x00, 0x00, 0x10, },
+    { 0x10, 0x00, 0x00, 0x00, 0x00, 0x10, },
+    { 0x10, 0x00, 0x00, 0x00, 0x00, 0x10, },
+    { 0x10, 0x00, 0x00, 0x00, 0x00, 0x10, },
+    { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, },
+
+      };
+
+void main(void)
+{
+	int ext=0;
+
+	sp=0;                   // sprite value
+	ptext();
+
+
+	Init_Mode();
+	Init_Screen();
+	initarray();
+	PutColor();
+	DrawGrid();
+
+
+	BoxImage();
+
+	gotoxy (29,25);
+	printf("F1 - Help ");
+
+
+//      if (!Get_Mouse(1))
+ //    {
+  //        printf("No Mouse Driver Present\n");
+   //       exit(1);
+    //  }
+
+       //       gotoxy (1,25);         //       Calculate Start of gride 10 lines down
+ //     printf("Sprite %d  Row %d ",sp,rw);
+
+      while (ext != 256)
+
+		{
+		Get_Mouse(0);
+		Calc_Coords();
+
+		Check_Draw();
+		Check_Color();
+		gotoxy (4,5);
+		printf("Sp:%d",sp);
+
+		gotoxy (4,6);
+		printf("Rw:%d",rw);
+
+		gotoxy (4,7);
+		printf("fg:%d",animobjects[rw].fshp[sp]->flag);
+
+
+		gotoxy (1,25);
+
+		if (bioskey(1))
+		{
+			rc = bioskey(0);
+			hc = (rc>>8)&0xff;
+			lc = rc&0xff;
+
+		    //   	printf("%d %d \n",hc,lc);
+
+	if (hc == 1 && lc == 27)   // ESC Key & Exit
+		{
+		ext=256;
+		printf("Exit\n");
+		}
+
+		if (hc == 59 && lc == 0)        // 'F1' Help Screen
+		{
+
+		nextshape(rw,sp);
+		Close_Mode();
+		helpscreen();
+		Init_Mode();
+		placeshape(rw,sp);
+		Draw_Data_to_Grid(rw,sp);
+		PutColor();
+		DrawGrid();
+
+		hc=0;lc=0;
+		   }
+
+		if (hc == 22 && lc == 117)        // 'U' Undp Last Change
+		{
+
+
+		clearshape();
+		UndoLastChange();
+		nextshape(rw,sp);
+		Draw_Data_to_Grid(rw,sp);
+		hc=0;lc=0;
+		   }
+
+
+		if (hc == 30 && lc == 97)        // 'A'Animate
+		   {
+		   Animate();
+		   hc=0;lc=0;
+		   }
+
+
+
+		   if (hc == 34 && lc == 103)        // 'G'Draw Grid
+		   {
+		DrawGrid();
+		hc=0;lc=0;
+		   }
+
+
+		   if (hc == 46 && lc == 99)        // 'C'Copy Shape
+		   {
+		   copyshape();
+		hc=0;lc=0;
+		   }
+
+		   if (hc == 18 && lc == 101)        // 'E'Erase Shape
+		   {
+		   EraseObject();
+		   hc=0;lc=0;
+		   }
+
+		   if (hc == 33 && lc == 102)        // 'F'Flip Shape
+		   {
+		   nextshape(rw,sp);
+		   flipshape();
+		   nextshape(rw,sp);
+		   Draw_Data_to_Grid(rw,sp);
+		   hc=0;lc=0;
+		   }
+
+		   if (hc == 50 && lc == 109)        // 'M'Move Shape
+		   {
+		    DrawGrid();
+		     hc=0;lc=0;
+		   }
+
+
+
+
+
+
+
+			if (hc == 73 && lc == 0 && rw >0)        // Page Up
+			{
+
+				nextshape(rw,sp);
+				clearshape();
+				cleargrid();
+
+				if (rw >0)
+				{
+
+				sp=0;
+				rw = rw - 1;
+				gotoxy (10,25);
+			      //	printf("Row %d ",rw);
+			       //	gotoxy (1,25);         //       Calculate Start of gride 10 lines down
+			       //	printf("Sprite %d ",sp);
+				placeshape(rw,sp);
+				Draw_Data_to_Grid(rw,sp);
+
+
+				hc=0;lc=0;
+				}
+			}
+
+			if (hc == 81 && lc == 0 && rw < 9)        // Page Down
+			{
+
+				nextshape(rw,sp);
+				clearshape();
+				cleargrid();
+
+
+				if (rw < (TOTALANIMS-1))
+				{
+				rw = rw + 1;
+				sp=0;
+
+			      //	gotoxy (10,25);
+			      //	printf("Row %d ",rw);
+			      //	gotoxy (1,25);         //       Calculate Start of gride 10 lines down
+			     //	printf("Sprite %d ",sp);
+
+				placeshape(rw,sp);
+				Draw_Data_to_Grid(rw,sp);
+
+				hc=0;lc=0;
+				}
+			}
+
+			if (hc == 47 && lc == 118)        // 'V'View Shapes
+			{
+			nextshape(rw,sp);
+			draw_screen(rw,sp);
+			hc=0;lc=0;
+
+			}
+
+
+
+
+			if (hc == 31 && lc == 115)        // 'S'Save Shapes
+			{
+			gotoxy (1,25);
+			printf("Saving ");
+
+			nextshape(rw,sp);
+			if (chkdrw==1)
+			{
+			filewrite();
+			placeshape(rw,sp);
+			Draw_Data_to_Grid(rw,sp);
+			}
+			else
+			{
+			gotoxy (1,25);
+			printf("Nothing to Save ");
+			}
+
+			hc=0;lc=0;
+
+			}
+
+			if (hc == 38 && lc == 108)        // 'L'Load Shapes
+			{
+			sp=0;
+			gotoxy (1,25);
+			printf("Loading ");
+			fileread();
+			placeshape(rw,sp);
+			Draw_Data_to_Grid(rw,sp);
+
+			hc=0;lc=0;
+			}
+
+
+
+
+			if (hc == 74 && lc == 45 && sp >0)        // '-' Moved down 1 object
+			{
+			 hc=0;lc=0;
+
+			 nextshape(rw,sp);
+
+			 if (sp >0)
+			 {
+			 sp = sp - 1;
+
+			 clearshape();
+			 cleargrid();
+			 placeshape(rw,sp);
+			 Draw_Data_to_Grid(rw,sp);
+
+			 gotoxy (1,25);         //       Calculate Start of gride 10 lines down
+		       //	 printf("Sprite %d ",sp);
+			 }
+
+
+			}
+
+
+				if (hc == 78 && lc == 43 && sp <9)        // + Moved over 1 object
+				{
+				hc=0;lc=0;
+
+				nextshape(rw,sp);
+				animobjects[rw].max+=1;
+
+
+				if (sp <10)
+				{
+				sp = sp + 1;
+
+				clearshape();
+				cleargrid();
+				placeshape(rw,sp);
+				Draw_Data_to_Grid(rw,sp);
+
+				}
+
+				gotoxy (1,25);         //       Calculate Start of gride 10 lines down
+			   //	printf("Sprite %d ",sp);
+
+
+		}
+
+
+		hc=0;lc=0;
+
+		}
+
+	}
+	farfree(st1);
+//	farfree(undoarea);
+	farfree(savearea);
+
+
+	Close_Mode();
+
+}
+
+
+
+
+
+void Check_Color(void)
+{
+	// Colors are divisable by 2 since they are 4 wide
+	// and 4 high
+	// start at 0
+	// increment by 5
+	int cl=320*2+2;
+
+
+
+	if (ym <= 12 && button==1)
+	 {
+	j = *(screen +val+cl);          // turn the block in to the color
+					// 'J' is the color
+	for (x=0;x<6;x++)               // draw the boax around the color
+	{
+		for (y=0;y<6;y++)
+		{
+		    *(screen+y+offset+val-1)^=box[y][x];
+		}
+		offset = offset + 320;      //bytes to next line
+	}
+	offset=0;
+	}
+
+}
+void DrawGrid(void)
+{
+
+	st = 64 * 320+50;
+	for (c=0;c<17;c++)
+	{
+		for (b=0;b<80;b++)             // 60 Lines high and 60 accross
+		{
+		*(screen+b+offset+st)^=23;
+		}
+		offset = offset + 320*5;
+	}
+	offset=0;
+	st=64 * 320+50;                 //start location
+
+	for (c=0;c<17;c++)
+	{
+
+		for (b=0;b<80;b++)             // 60 Lines high and 60 accross
+		{
+		*(screen+b+offset+st+step)^=23;
+		offset = offset + 319;
+		}
+		offset = 0;
+		step = step + 5;
+	}
+	offset=0;
+	step=0;
+
+}
+
+void Colors(void)
+{
+	long int b;
+
+	 for (c=16;c<32;c++)
+	 {
+		for (b=0;b<64000;b++)
+		{
+		*(screen+b)=c;
+		}
+	 }
+}
+void Check_Draw(void)
+{
+
+
+		if (button==0)
+		{
+
+			CutImage();
+			for (tm=0;tm<1100;tm++)
+			BoxImage();
+			PutImage();
+
+			RestoreBack();
+			lso=0;
+		 //	if(lso == 0 && chkdrw ==1)
+		   //           SaveLastImage();
+
+		}
+
+		if (button==1)
+
+		{
+
+			if (xm >=47 && ym >=61 && ym <= 144 && xm <=126)
+			{
+				animobjects[rw].fshp[sp]->flag=1;
+			   //	animobjects[rw].max=1;
+
+				chkdrw=1;
+				if (lso==0)
+				{
+					SaveLastImage();
+					lso=1;
+				}
+
+				//lso=0;
+
+				PutImage();
+				*(screen + acxm + acym * 320 + 32260) = j;
+			}
+
+
+
+		}
+
+//                      oxm = xm;
+}
+
+
+
+void drawmem(void)
+{
+
+	int b,c,loc;
+
+	loc = 320*100;
+	offset=0;
+	for (b=0;b<6;b++)
+	{
+		for(c=0;c<6;c++)
+		{
+		if (box[b][c]>0)
+			{
+			*(screen+c+offset+loc)^=box[b][c];
+			*(screen+c+offset+320+32260) = box[b][c];
+			}
+
+//                     getch();
+		}
+		offset=offset+320;
+	}
+	offset=0;
+
+	getch();
+
+}
+
+
+void Draw_Data_to_Grid(int rw , int sp)
+
+{
+
+	int blkclr,gx,gy,cx,cy,incr=0,dninc=0;
+
+	st = 65 * 320+51;
+	dninc = st;
+
+	for (gx=0;gx<16;gx++)
+	{
+	    for (gy=0;gy<16;gy++)
+	    {
+		for (cy=0;cy<4;cy++)
+		{
+			for (cx=0;cx<4;cx++)             // 60 Lines high and 60 accross
+			{
+			*(screen+cx+st+offset)=animobjects[rw].fshp[sp]->shp[gx*16+gy];
+
+			}
+			offset = offset + 320;
+		}
+		st = st +5;
+		offset=0;
+	    }
+	    incr = incr + 5;
+	    st = dninc + (incr*320);
+
+	}
+}
+
+
+void nextshape(int rw , int sp)
+{
+
+	int i,j,vz;
+
+	vz=0;
+
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+			animobjects[rw].fshp[sp]->shp[i*16+j]=*(screen+j+36430+vz);
+
+		}
+		vz = vz + 320;
+	       //       getch();
+	    }
+
+//      printf("Done next Shape\m");
+
+}
+
+
+void drawshape(int rw , int sp)
+{
+
+	int i,j,vz;
+
+	vz=0;
+
+	for (i=0;i<x;i++)
+
+	    {
+		for (j=0;j<y;j++)
+		{
+
+			*(screen+j+vz)=animobjects[rw].fshp[sp]->shp[i*16+j];
+
+		}
+
+		vz = vz + 320;
+
+	    }
+
+
+
+
+}
+
+
+void clearshape(void)
+{
+
+	int i,j,vz;
+
+	vz=0;
+
+	for (i=0;i<16;i++)
+	    {
+		for (j=0;j<16;j++)
+		{
+
+			*(screen+j+36430+vz)=0;
+
+		}
+		vz = vz + 320;
+	    }
+
+
+
+}
+
+void cleargrid(void)
+{
+
+	int blkclr,gx,gy,cx,cy,incr=0,dninc=0;
+
+
+	st = 65 * 320+51;
+
+	dninc = st;
+
+	offset=0;
+
+	for (gx=0;gx<16;gx++)
+	{
+	    for (gy=0;gy<16;gy++)
+	    {
+		for (cy=0;cy<4;cy++)
+		{
+			for (cx=0;cx<4;cx++)             // 60 Lines high and 60 accross
+			{
+			*(screen+cx+st+offset)=0;
+			}
+			offset = offset + 320;
+		}
+		st = st +5;
+		offset=0;
+	    }
+	    incr = incr + 5;
+	    st = dninc + (incr*320);
+
+	}
+
+
+
+
+}
+
+void placeshape(int rw, int sp)
+{
+
+	int i,j,vz;
+
+	vz=0;
+
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+
+			*(screen+j+36430+vz)=animobjects[rw].fshp[sp]->shp[i*16+j];
+
+		}
+		vz = vz + 320;
+
+	    }
+
+
+}
+
+
+
+void draw_screen(int rw, int sp)
+{
+	int ap=0;
+	int dn=0;
+	int cnt=0;
+	int t,s,y;
+	long int clr;
+
+	for (clr=0;clr<64000;clr++)
+		{
+		*(screen+clr)=0;
+		}
+
+       //       printf("%d %d",rw,sp);
+
+	for (t=0;t<9;t++)
+	{
+		for (s=0;s<=9;s++)
+		{
+			if (animobjects[t].fshp[s]->flag==1)
+			{
+				for (x=0;x<16;x++)
+				{
+					for (y=0;y<16;y++)
+					{
+					*(screen+y+offset+ap+dn)=animobjects[t].fshp[s]->shp[x*16+y];
+					}
+					offset = offset + 320;      //bytes to next line
+				}
+
+				offset = 0;
+				ap = ap +16;
+				//getch();
+			}
+		}
+		cnt = cnt + 18;
+		dn = cnt * 320;
+		offset=0;
+		ap=0;
+
+
+	}
+	gotoxy (1,25);
+	printf("Press Any Key to Return");
+	getch();
+		for (clr=0;clr<64000;clr++)
+		{
+		*(screen+clr)=0;
+		}
+
+	placeshape(rw,sp);
+	Draw_Data_to_Grid(rw,sp);
+	PutColor();
+	DrawGrid();
+	gotoxy (29,25);
+	printf("F1 - Help ");
+
+
+}
+
+
+void copyshape(void)
+{
+
+    int cp,dn,i;
+
+    gotoxy (1,25);
+    printf("Source :");
+    cp=getch()-'0';
+
+    if (cp < 0 || cp > 9)
+	printf("Object out of Row Range");
+    else
+    {
+	gotoxy (1,25);
+	printf("Destin :");
+	dn=getch()-'0';
+		if (dn <0 || dn >9)
+			{
+			gotoxy (1,25);
+			printf("Object destination out of Range");
+			}
+		else
+			if (animobjects[rw].fshp[dn]->flag==1)
+				{
+				gotoxy (1,25);
+				printf("Destination Contains Data");
+				}
+				else
+				{
+				for (i=0;i<259;i++)
+				{
+				animobjects[rw].fshp[dn]->shp[i]=animobjects[rw].fshp[cp]->shp[i];
+				}
+				animobjects[rw].fshp[dn]->flag=1;
+				placeshape(rw,sp);
+				Draw_Data_to_Grid(rw,sp);
+
+				}
+
+    }
+
+
+
+
+
+}
+
+
+
+void EraseObject(void)
+{
+
+	clearshape();
+	cleargrid();
+	animobjects[rw].fshp[sp]->flag=0;
+	nextshape(rw,sp);
+
+
+}
+
+
+void SaveLastImage(void)
+{
+
+	// *(savearea+i)=*(screen+y+offset+val);
+	int i,j,vz;
+
+	vz=0;
+
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+			undoarea[j+i*16]=*(screen+j+36430+vz);
+
+		}
+		vz = vz + 320;
+	    }
+
+	    lso=1;
+
+}
+
+void UndoLastChange(void)
+{
+
+	int i,j,vz;
+
+	vz=0;
+
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+			*(screen+j+36430+vz)=undoarea[i*16+j];
+
+		}
+		vz = vz + 320;
+	    }
+
+
+
+
+}
+
+
+void flipshape(void)
+{
+
+	int i,j,vz,dn;
+
+	vz=0;
+
+	gotoxy (1,25);
+	printf("Flip (x or y)`:");
+
+	dn=getch();
+
+	if (dn == 'Y' || dn == 'y')
+	{
+
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+
+			*(screen+j+36430+vz)=animobjects[rw].fshp[sp]->shp[(15-i)*16+j];
+
+		}
+		vz = vz + 320;
+
+	    }
+	}
+
+	if (dn == 'X' || dn == 'x')
+	{
+	for (i=0;i<16;i++)
+		{
+		for (j=0;j<16;j++)
+		{
+
+			*(screen+j+36430+vz)=animobjects[rw].fshp[sp]->shp[i*16+15-j];
+
+		}
+		vz = vz + 320;
+
+	    }
+	}
+
+
+
+}
+
+
+void Animate(void)
+{
+
+    int cp,dn,i;
+
+    gotoxy (1,25);
+    printf("Start :");
+    cp=getch()-'0';
+
+    if (cp < 0 || cp > 9)
+	printf("Object out of Row Range");
+    else
+    {
+	gotoxy (1,25);
+	printf("Destin :");
+	dn=getch()-'0';
+
+	if (dn <0 || dn >9)
+	{
+		gotoxy (1,25);
+		printf("Object destination out of Range");
+	}
+	else
+	{
+		while(!bioskey(1))
+		{
+		for (i=cp;i<dn;i++)
+		    {
+		    placeshape(rw,i);
+		    delay(1);
+		    }
+		}
+		getch();
+	}
+
+
+    }
+    placeshape(rw,sp);
+    Draw_Data_to_Grid(rw,sp);
+
+
+}

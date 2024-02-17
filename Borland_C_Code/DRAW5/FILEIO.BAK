@@ -1,0 +1,145 @@
+
+#include <stdio.h>
+#include "draw.h"
+
+
+char far *st1;
+
+FILE *in, *out, *outdata, *indata;
+
+struct fshape
+	{
+
+		int w,h;
+		int n,c;
+		int flag;
+		int rowflag;
+		char far shp[260];
+					// TOTALSHAPE  =  20
+	};
+
+
+
+struct animshape {
+		int active;
+		int animwidth;
+		int animheight;
+		int animox;
+		int animoy;
+		int animx;
+		int animy;
+		int prox;
+		int animspeed;
+		int currentshape;
+		int oldshape;
+		int max;
+		int row;
+
+		struct fshape *fshp[TOTALSHAPE];        // 10 Pointers to data
+
+	 } animobjects[TOTALANIMS];
+
+
+
+
+
+int filewrite(void)
+{
+
+   int i,numobj,numrow;
+
+
+   if ((out = fopen("fileout.dat", "wb"))
+	   == NULL)
+   {
+	  fprintf(stderr, "Cannot open output file.\n");
+	  return 1;
+   }
+
+	if ((outdata = fopen("filedata.dat", "wb"))
+		   == NULL)
+		{
+		  fprintf(stderr, "Cannot open output file.\n");
+		  return 1;
+		}
+		fwrite(animobjects,sizeof(animobjects),1,outdata);
+
+
+	for (numrow=0;numrow<10;numrow++)
+	{
+		for (numobj=0;numobj<=animobjects[numrow].max;numobj++)
+		{
+			if (animobjects[numrow].fshp[numobj]->flag==1)
+			{
+
+			  fwrite(animobjects[numrow].fshp[numobj],272l,1,out);
+
+			}
+		}
+	}
+
+   fclose(out);
+   fclose(outdata);
+   return 1;
+
+}
+
+int fileread(void)
+{
+
+	int i,j,numobj,numrow;
+	char far *p;
+
+   if ((in = fopen("fileout.dat", "rb"))
+	   == NULL)
+   {
+	  fprintf(stderr, "Cannot open input file.\n");
+	  return 1;
+   }
+
+	if ((indata = fopen("filedata.dat", "rb"))
+		   == NULL)
+		{
+		  fprintf(stderr, "Cannot open output file.\n");
+		  return 1;
+		}
+
+		fread(animobjects,sizeof(animobjects),1,indata);
+
+	p = st1;
+
+	for (i=0;i<TOTALANIMS;i++)
+	{
+		for (j=0;j<TOTALSHAPE;j++)
+
+			{
+			animobjects[i].fshp[j]=(struct fshape *)p;
+			p+=sizeof(struct fshape);
+
+			}
+	}
+
+
+	for (numrow=0;numrow<10;numrow++)
+	{
+		for (numobj=0;numobj<=animobjects[numrow].max;numobj++)
+		{
+
+		fread(animobjects[numrow].fshp[numobj],272l,1,in);
+		}
+	}
+
+
+
+
+
+   fclose(in);
+   fclose(indata);
+
+
+   return 1;
+
+
+
+}
+
