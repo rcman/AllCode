@@ -19,8 +19,8 @@ Folder structure
   Projectname->include\
   Projectname->release\
   SConstruct\
-
-  Inside the project directory just run scons
-  the executable will be places in the release directory
+\
+  Inside the project directory just run scons\
+  the executable will be places in the release directory\
 
   
