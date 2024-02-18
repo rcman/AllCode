@@ -22,5 +22,7 @@ Folder structure
 \
   Inside the project directory just run scons\
   the executable will be places in the release directory\
+  \
+  
 
   
