@@ -15,10 +15,10 @@ In the myappsv5.sh this installs all the libraries you will need.
 
 Folder structure
 
-  Projectname->src
-  Projectname->include
-  Projectname->release
-  SConstruct
+  Projectname->src__
+  Projectname->include__
+  Projectname->release__
+  SConstruct__
 
   Inside the project directory just run scons
   the executable will be places in the release directory
