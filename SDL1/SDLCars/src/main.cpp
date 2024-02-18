@@ -1,0 +1,322 @@
+/*This source code copyrighted by Lazy Foo' Productions (2004-2009) and may not
+be redestributed without written permission.*/
+
+//The headers
+#include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
+#include <string>
+#include "main.h"
+
+//The offsets of the background
+Uint8			*keystates;
+
+
+class Timer
+{
+    private:
+    //The clock time when the timer started
+    int startTicks;
+
+    //The ticks stored when the timer was paused
+    int pausedTicks;
+
+    //The timer status
+    bool paused;
+    bool started;
+
+    public:
+    //Initializes variables
+    Timer();
+
+    //The various clock actions
+    void start();
+    void stop();
+    void pause();
+    void unpause();
+
+    //Gets the timer's time
+    int get_ticks();
+
+    //Checks the status of the timer
+    bool is_started();
+    bool is_paused();
+};
+
+bool init()
+{
+    //Initialize all SDL subsystems
+    if( SDL_Init( SDL_INIT_EVERYTHING ) == -1 )
+    {
+        return false;
+    }
+
+    //Set up the screen
+    screen = SDL_SetVideoMode( SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_BPP, SDL_SWSURFACE );
+
+    //If there was an error in setting up the screen
+    if( screen == NULL )
+    {
+        return false;
+    }
+
+    //Set the window caption
+    SDL_WM_SetCaption( "Background Test", NULL );
+
+    //If everything initialized fine
+    return true;
+}
+
+
+
+
+Timer::Timer()
+{
+    //Initialize the variables
+    startTicks = 0;
+    pausedTicks = 0;
+    paused = false;
+    started = false;
+}
+
+
+
+void Timer::start()
+{
+    //Start the timer
+    started = true;
+
+    //Unpause the timer
+    paused = false;
+
+    //Get the current clock time
+    startTicks = SDL_GetTicks();
+}
+
+void Timer::stop()
+{
+    //Stop the timer
+    started = false;
+
+    //Unpause the timer
+    paused = false;
+}
+
+void Timer::pause()
+{
+    //If the timer is running and isn't already paused
+    if( ( started == true ) && ( paused == false ) )
+    {
+        //Pause the timer
+        paused = true;
+
+        //Calculate the paused ticks
+        pausedTicks = SDL_GetTicks() - startTicks;
+    }
+}
+
+
+void Timer::unpause()
+{
+    //If the timer is paused
+    if( paused == true )
+    {
+        //Unpause the timer
+        paused = false;
+
+        //Reset the starting ticks
+        startTicks = SDL_GetTicks() - pausedTicks;
+
+        //Reset the paused ticks
+        pausedTicks = 0;
+    }
+}
+
+int Timer::get_ticks()
+{
+    //If the timer is running
+    if( started == true )
+    {
+        //If the timer is paused
+        if( paused == true )
+        {
+            //Return the number of ticks when the timer was paused
+            return pausedTicks;
+        }
+        else
+        {
+            //Return the current time minus the start time
+            return SDL_GetTicks() - startTicks;
+        }
+    }
+
+    //If the timer isn't running
+    return 0;
+}
+
+bool Timer::is_started()
+{
+    return started;
+}
+
+bool Timer::is_paused()
+{
+    return paused;
+}
+
+void apply_surface( int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip)
+{
+    //Holds offsets
+    SDL_Rect offset;
+
+    //Get offsets
+    offset.x = x;
+    offset.y = y;
+
+    //Blit
+    SDL_BlitSurface( source, clip, destination, &offset );
+}
+
+void clean_up()
+{
+    // free the memory we allocated in Gameinit()
+
+    if (tileset) { SDL_FreeSurface(tileset); }
+
+    // event is not an array, so we do not use the array-form of the delete operator:
+    if (event) { delete event; }
+    // Delete Player
+
+
+}
+
+int main( int argc, char* args[] )
+{
+    Timer fps;
+    bool done;
+    //Initialize
+    if (!Gameinit())
+    {
+        return 1;
+    }
+
+    keystates = SDL_GetKeyState(0);
+    SDL_Event		event;
+    int bgX = 0, bgY = 0, scrollspeed = 4,movespeed = 23;
+
+while (!done){
+
+		//handle messages
+		while(SDL_PollEvent(&event)){
+			switch(event.type){
+				case SDL_QUIT:
+					done = true;
+				break;
+
+				default:
+				break;
+			}
+		}
+
+//Scroll background
+
+//        fprintf(stderr, "bgY %d  bhX %d bg->h %d  bg->w %d \n", bgY,bgX, bg->h , bg->w);
+
+        bgY += scrollspeed;
+
+        //If the background has gone too far
+        if( bgY >= bg->h )
+        {
+            //Reset the offset
+            bgY = 0;
+        }
+
+        apply_surface( bgX, bgY, bg, screen );
+        apply_surface( bgX, bgY-bg->h, bg, screen );
+
+
+
+		if(keystates[SDLK_ESCAPE])		//quit?
+			done = true;
+
+
+   if(keystates[SDLK_UP]){
+       scrollspeed +=4;
+		player->y = player->y - movespeed;		//move right
+		if (player->y < 100)
+		{
+            //player->vely = 0;
+            player->y = 100;
+		}
+
+
+	}
+	if(keystates[SDLK_DOWN]){
+	    scrollspeed -=4;
+	    player->y = player->y + movespeed;		//move right
+	    if (scrollspeed < 5)
+            {
+                scrollspeed =3;
+            }
+		//player->vely= player->vely + movespeed;		//move left
+		if (player->y > 600)
+		{
+            //player->vely=0;
+		    player->y = 600;
+		}
+
+
+
+
+	}
+	if(keystates[SDLK_RIGHT]){	//if the player isn't jumping already
+		player->x = player->x + movespeed;		//jump!
+        if (player->x > 740)
+        {
+            scrollspeed =4;
+            player->x = 750;
+        }
+
+
+	}
+
+    if(keystates[SDLK_LEFT]){	//if the player isn't jumping already
+		player->x = player->x - movespeed;		//jump!
+
+        if (player->x < 200)
+        {
+            scrollspeed =4;
+            player->x = 200;
+        }
+
+
+
+	}
+
+    moveplayer();
+
+
+
+        // flip the screen buffers (double buffering)
+        SDL_Flip(screen);
+
+        // pause a bit to let the CPU rest
+        SDL_Delay(20);
+
+
+    //Cap the frame rate
+    if( fps.get_ticks() < 1000 / FRAMES_PER_SECOND )
+     {
+         SDL_Delay( ( 1000 / FRAMES_PER_SECOND ) - fps.get_ticks() );
+      }
+
+    //DrawMainMap();
+
+
+    }
+
+	// clean up after the game
+    clean_up();
+
+	// return to the OS
+    return 0;
+}

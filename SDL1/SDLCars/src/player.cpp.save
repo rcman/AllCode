@@ -1,0 +1,186 @@
+#include "main.h"
+#include <string>
+#include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
+
+bool init_player()
+{
+        if (!player) {player = new MyPlayer; return true;}
+        return false;
+}
+
+void moveplayer()
+{
+
+    if (player->x > 1000)
+    {
+        player->x = 1000;
+    }
+    if (player->x <10)
+    {
+        player->x = 10;
+    }
+    apply_surface( player->x, player->y, man, screen, &manA[player->animnumber]);
+
+}
+
+void movebullets()
+{
+    int i;
+            for (i = 0;i < MAX_SHOTS; i++)
+            {
+                if (savedshots[i].shotalive)
+                {
+                    // Move the Saved Shot
+                    savedshots[i].y = savedshots[i].y - 24;
+                    apply_surface( savedshots[i].x, savedshots[i].y, man, screen, &manA[1]);
+                        if (savedshots[i].y < 1 ) // Shot is dead
+                        {
+                            savedshots[i].shotalive = false;
+                        }
+
+                }
+            }
+}
+bool check_collision()
+{
+
+    int i;
+    int leftA, leftB;
+    int rightA, rightB;
+    int topA, topB;
+    int bottomA, bottomB;
+     //The sides of the rectangles
+     //Calculate the sides of rect A
+    // leftA = A.x;
+    // rightA = A.x + A.w;
+    // topA = A.y;
+    // bottomA = A.y + A.h;
+
+    //Calculate the sides of rect B
+    // leftB = B.x;
+    // rightB = B.x + B.w;
+    // topB = B.y;
+    //bottomB = B.y + B.h;
+
+
+    for (i = 0;i < MAX_SHOTS; i++)
+    {
+        if (savedshots[i].shotalive)
+        {
+                //Calculate the sides of rect A
+                leftA =  savedenemy[0].x;
+                rightA =  savedenemy[0].x +  savedenemy[0].w;
+                topA =  savedenemy[0].y;
+                bottomA =  savedenemy[0].y +  savedenemy[0].h;
+
+                //Calculate the sides of rect B
+                leftB = savedshots[i].x;
+                rightB = savedshots[i].x + savedshots[i].w;
+                topB = savedshots[i].y;
+                bottomB = savedshots[i].y + savedshots[i].h;
+
+                //If any of the sides from A are outside of B
+                if (rightB >= leftA &&
+                	leftB <= rightA &&
+                	bottomB >= topA &&
+                	topB <= bottomA)
+                {
+                	// collision
+                	savedenemy[i].collisiondetected = true;
+                    savedenemy[i].enemyalive = false;
+                }
+
+
+        }
+
+    }
+    //If none of the sides from A are outside B
+    return true;
+}
+
+void enemyexplodecheck()
+{
+   // Animation manA explosions are 1 -6
+    int i;
+    for (i = 0;i < MAX_ENEMIES; i++)
+    {
+        if (savedenemy[i].collisiondetected)
+        {
+
+            // Start explosion in current enemy pot and increase explosion by one
+            savedenemy[i].animnumber = savedenemy[i].animnumber + 1;
+            apply_surface( savedenemy[i].x,savedenemy[i].y, man, screen, &enemy1[savedenemy[i].animnumber]);
+            savedenemy[i].enemyalive = false;
+            if (savedenemy[i].animnumber > 5)
+            {
+                //explosion finished
+                savedenemy[i].collisiondetected = false;
+                savedshots[i].shotalive = false;
+                savedenemy[i].enemyalive = false;
+            }
+        }
+    }
+
+}
+
+
+void DrawMainMap()
+{
+    // clear screen to black
+	SDL_FillRect(screen, 0, 0);
+    apply_surface(0,0,  bg, screen, &);
+}
+
+void drawenemies()
+{
+
+    int c;
+    for (c = 0;c < MAX_ENEMIES; c++)
+    {
+       if (savedenemy[c].enemyalive)
+       {
+       savedenemy[c].y +=6;
+       apply_surface(savedenemy[c].x,savedenemy[c].y, man, screen, &enemy1[0] );
+       if (savedenemy[c].y > SCREEN_HEIGHT)
+       {
+            savedenemy[c].y = 0;
+       }
+       }
+    }
+}
+
+void collision2()
+{
+    int i;
+    int leftA;
+    int rightA;
+    int topA;
+    int bottomA;
+ // savedenemy[i].x
+ // savedenemy[i].y
+ // savedshots[i].x
+ // savedshots[i].y
+
+    //Calculate the sides of rect A
+
+ //  leftA =  savedenemy[0].x;
+ //  rightA =  savedenemy[0].x +  savedenemy[0].w;
+//   topA =  savedenemy[0].y;
+
+                leftA =  savedenemy[0].x;
+                rightA =  savedenemy[0].x +  savedenemy[0].w;
+                topA =  savedenemy[0].y;
+                bottomA =  savedenemy[0].y +  savedenemy[0].h;
+
+
+for (i = 0;i < MAX_SHOTS; i++)
+{
+ if (savedshots[i].x >= leftA && savedshots[i].x <= rightA && savedshots[i].y >= topA && savedshots[i].y <= bottomA)
+    {
+                savedenemy[0].enemyalive = false;
+                fprintf(stderr, "fooint %d foostring %s", 10, "hi!");
+    }
+}
+
+}
