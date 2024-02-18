@@ -15,7 +15,7 @@ In the myappsv5.sh this installs all the libraries you will need.
 
 Folder structure
 
-  Projectname->src\n
+  Projectname->src
   Projectname->include
   Projectname->release
   SConstruct
