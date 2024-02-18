@@ -3,18 +3,19 @@
 ![Screenshot from 2023-12-15 09-29-28](https://github.com/rcman/SDL2_random/assets/13282955/53b8010a-1cb5-4e80-ab62-fcfd7a23d030)
 
 
-**SDL 1.2 SDL 2 amd Allego C Code**
-SDL2 Test Games
-SDL2 Graphic test
-
-All build in Linux with Scons. 
-
-to Install scons run sudo apt install scons
-
-In the myappsv5.sh this installs all the libraries you will need.
-
-Folder structure
-
+**SDL 1.2 SDL 2 amd Allego C Code**\
+\
+SDL2 Test Games\
+SDL2 Graphic test\
+\
+All build in Linux with Scons.\ 
+\
+to Install scons run sudo apt install scons\
+\
+In the myappsv5.sh this installs all the libraries you will need.\
+\
+Folder structure\
+\
   Projectname->src\
   Projectname->include\
   Projectname->release\
