@@ -23,6 +23,12 @@ Folder structure\
 \
   Inside the project directory just run scons\
   the executable will be places in the release directory\
+
+ ** I've Added a Makefile so you can just run make.
+
+  The Makefile that's in the root of SDL2 will work with all programs. **
+
+  
   \
   
 
