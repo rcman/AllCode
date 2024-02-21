@@ -34,5 +34,5 @@ $(RELEASE_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # Clean up
 clean:
-	
+	scons -c
 
