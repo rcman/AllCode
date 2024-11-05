@@ -1,2 +1,2 @@
 
-![screenshot](https://github.com/rcman/shooterv2.4.8/assets/13282955/5523d08f-b3e0-4224-8d0a-8f18e0d73442)
+This is something I was working on, shoots forward and backwards. Enevemies don't do anything special. The code is pretty bad. Keeps score and you can take hit damage but won't die.
