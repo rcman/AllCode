@@ -34,3 +34,4 @@ Folder structure\
   
 ![ship](https://github.com/user-attachments/assets/e663316a-4e35-4e67-b066-4d5005d69e4f)
 ![shot](https://github.com/user-attachments/assets/fdc2b6c8-5701-49dc-8fef-d92e87252c71)
+![bullet](https://github.com/user-attachments/assets/5bf26e1d-1c5a-4ac3-82c4-a51747e59b9b)
