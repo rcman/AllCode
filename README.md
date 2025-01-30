@@ -27,9 +27,10 @@ Folder structure\
  ** I've Added a Makefile so you can just run make.
 
   The Makefile that's in the root of SDL2 will work with all programs. **
+<br>
+
+
 
   
-  \
-  
-
-  
+![ship](https://github.com/user-attachments/assets/e663316a-4e35-4e67-b066-4d5005d69e4f)
+![shot](https://github.com/user-attachments/assets/fdc2b6c8-5701-49dc-8fef-d92e87252c71)
